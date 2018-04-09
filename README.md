@@ -1,4 +1,5 @@
 # RiseML Helm Chart
+![Release](https://img.shields.io/badge/release-v1.2.2-green.svg?longCache=true&style=flat-square)
 
 Helm chart for RiseML.
 
