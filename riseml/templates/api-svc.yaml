@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: riseml-api
+  labels:
+    app: riseml-api
+spec:
+  selector:
+    app: riseml-api
+  ports:
+  - port: 80

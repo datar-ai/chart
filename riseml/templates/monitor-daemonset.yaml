@@ -1,0 +1,98 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: riseml-monitor
+  namespace: riseml
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: riseml-monitor
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if not (.Values.nodeSelectors.riseml | empty) }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelectors.riseml | indent 8 }}
+      {{- end }}
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Equal"
+        value: "present"
+        effect: "NoSchedule"
+      {{- if not (.Values.tolerations.training | empty) }}
+{{ toYaml .Values.tolerations.training | indent 6 }}
+      {{- end }}
+      {{- if .Values.scheduleOnMaster }}
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      {{- end }}
+      serviceAccountName: riseml-serviceaccount
+      containers:
+      - name: monitor
+        securityContext:
+          privileged: true
+        image: riseml/monitor:{{ .Values.versions.monitor }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          limits:
+            memory: "256Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: AMQP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_url
+        - name: RISEML_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: api_url
+        - name: RISEML_APIKEY
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: admin_api_key
+        - name: NVIDIA_DRIVER_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: nvidia_driver_dir
+        volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+        {{- if .Values.nvidiaDriverDir }}
+        - name: nvidia-driver
+          mountPath: /usr/local/nvidia
+        {{ end }}
+      volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+      {{- if .Values.nvidiaDriverDir }}
+      - name: nvidia-driver
+        hostPath:
+          path: {{ .Values.nvidiaDriverDir | quote }}
+      {{- end }}

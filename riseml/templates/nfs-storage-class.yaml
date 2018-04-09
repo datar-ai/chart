@@ -1,0 +1,12 @@
+{{- if .Values.nfsProvisioner.enabled }}
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: riseml-nfs
+  labels:
+    app: riseml-nfs
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+provisioner: riseml.com/nfs
+{{- end}}

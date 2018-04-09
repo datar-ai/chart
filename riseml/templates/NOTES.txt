@@ -1,0 +1,28 @@
+
+RiseML was deployed. It may take a few minutes for all services to be operational.
+You can watch the progress with this command (all Pods should be RUNNING):
+  watch -n 1 kubectl get pods -n=riseml
+
+{{ if .Values.nodePorts -}}
+To set up your client, look up your RiseML master's hostname or ip address and run:
+  export RISEML_HOSTNAME=<YOUR MASTER HOSTNAME/IP>
+
+### RiseML Client
+You can get the RiseML client from here: http://docs.riseml.com/install/cli.html
+To configure the RiseML client, run:
+  riseml user login --api-key {{ .Values.adminApiKey }} --api-host ${RISEML_HOSTNAME}:{{ .Values.nodePorts.web }}
+{{- else }}
+### RiseML Client
+You can get the RiseML client from here: http://docs.riseml.com/install/cli.html
+To get the information required to login with the RiseML client, execute the following:
+export RISEML_ENDPOINT=$(kubectl get service riseml-ingress -n riseml -o yaml |
+    grep "ip:" | grep -o '[^ ]*$'):$(kubectl get service riseml-ingress -n riseml -o yaml |
+    grep "targetPort:" | grep -o '[^ ]*$' | head -n 1) && \
+echo "Your RiseML API key: {{ .Values.adminApiKey }}" && \
+echo "Your RiseML API endpoint: $RISEML_ENDPOINT" && \
+echo "To login, run: "  && \
+echo "  riseml user login --api-key {{ .Values.adminApiKey }} --api-host ${RISEML_ENDPOINT}"
+{{- end }}
+
+You can find some examples to run on https://github.com/riseml/examples
+More information is available in our documentation: https://docs.riseml.com

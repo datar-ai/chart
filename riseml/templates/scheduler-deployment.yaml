@@ -1,0 +1,124 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: riseml-scheduler
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: riseml-scheduler
+        type: system
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      serviceAccountName: riseml-serviceaccount
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: scheduler
+        image: riseml/scheduler:{{ .Values.versions.scheduler }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        - name: LOG_SIDECAR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: logsidecar_image
+        - name: AMQP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_url
+        - name: AMQP_SCHEDULER_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_scheduler_queue
+        - name: AMQP_STATE_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_state_exchange
+        - name: AMQP_LOG_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_log_queue
+        - name: RISEML_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: api_url
+        - name: RISEML_APIKEY
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: admin_api_key
+        - name: OUTPUT_PERSISTENCE_CLAIM_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: output_persistence_claim_name
+        - name: DATA_PERSISTENCE_CLAIM_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: data_persistence_claim_name
+        - name: NVIDIA_DRIVER_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: nvidia_driver_dir
+        - name: SYSTEM_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: system_node_selectors
+        - name: RISEML_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: riseml_node_selectors
+        - name: TRAINING_POD_TOLERATIONS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: training_pod_tolerations

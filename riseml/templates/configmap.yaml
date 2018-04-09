@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: riseml-config
+data:
+  amqp_url: amqp://riseml-rabbitmq
+  db_url: postgresql://dbuser:dbpass@{{ .Release.Name }}-postgresql/riseml
+  image_registry_internal: riseml-registry:5000
+  image_registry_external: 127.0.0.1:31500
+  imagebuilder_image: riseml/imagebuilder:{{ .Values.versions.imagebuilder }}
+  logsidecar_image: riseml/logsidecar:{{ .Values.versions.logsidecar }}
+  gitweb_url: http://riseml-gitweb:8888
+  loghandler_url: http://riseml-loghandler
+  api_url: http://riseml-api
+  {{- if eq .Values.environment "staging" }}
+  backend_url: https://backend.riseml-staging.com
+  {{- else }}
+  backend_url: https://backend.riseml.com
+  {{- end }}
+  admin_email: {{ .Values.adminEmail | quote }}
+  admin_api_key: {{ .Values.adminApiKey | quote }}
+  amqp_log_queue: log
+  amqp_state_exchange: states
+  amqp_scheduler_queue: scheduler
+  data_persistence_claim_name: {{ .Values.data.persistence.claimName | quote }}
+  output_persistence_claim_name: {{ .Values.output.persistence.claimName | quote }}
+  cluster_id: {{ .Values.clusterId | quote }}
+  account_key: {{ .Values.accountKey | quote }}
+  nvidia_driver_dir: {{ .Values.nvidiaDriverDir | quote }}
+  version: {{ .Chart.Version | quote }}
+  riseml_node_selectors: {{ toYaml .Values.nodeSelectors.riseml | quote }}
+  imagebuilder_node_selectors: {{ toYaml .Values.nodeSelectors.imageBuilder | quote }}
+  system_node_selectors: {{ toYaml .Values.nodeSelectors.system | quote }}
+  gpu_node_selectors: {{ toYaml .Values.nodeSelectors.gpu | quote }}
+  training_node_selectors: {{ toYaml .Values.nodeSelectors.training | quote }}
+  training_pod_tolerations: {{ toYaml .Values.tolerations.training | quote }}
+  {{- if .Values.nodePorts }}
+  cluster_ports_web: {{ .Values.nodePorts.web | quote }}
+  cluster_ports_sync: {{ .Values.nodePorts.sync | quote }}
+  cluster_ports_minio_data: {{ .Values.nodePorts.minioData | quote }}
+  cluster_ports_minio_output: {{ .Values.nodePorts.minioOutput | quote }}
+  {{- else }}
+  cluster_ports_web: {{ .Values.loadBalancerPorts.web | quote }}
+  cluster_ports_sync: {{ .Values.loadBalancerPorts.sync | quote }}
+  cluster_ports_minio_data: {{ .Values.loadBalancerPorts.minioData | quote }}
+  cluster_ports_minio_output: {{ .Values.loadBalancerPorts.minioOutput | quote }}
+  {{- end }}

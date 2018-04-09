@@ -1,0 +1,40 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: riseml-rabbitmq
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: riseml-rabbitmq
+        type: system
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.6.9-management
+        resources:
+          requests:
+            cpu: "300m"
+            memory: "128Mi"
+        ports:
+        - containerPort: 15672
+        - containerPort: 5672

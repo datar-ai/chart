@@ -1,0 +1,110 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: riseml-loghandler
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: riseml-loghandler
+        type: system
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: loghandler
+        image: riseml/loghandler:{{ .Values.versions.loghandler }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 3100
+        volumeMounts:
+        - mountPath: /log
+          name: logs-volume
+          subPath: {{ .Values.logs.persistence.subPath }}
+        env:
+        - name: NODE_ENV
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: PORT
+          value: "3100"
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: db_url
+        - name: AMQP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_url
+        - name: RISEML_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: api_url
+        - name: RISEML_APIKEY
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: admin_api_key
+        - name: AMQP_STATE_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_state_exchange
+        - name: AMQP_LOG_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_log_queue
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        - name: LOG_DIR
+          value: /log
+        - name: DEBUG
+          value: loghandler:*
+        - name: DEBUG_COLORS
+          value: "1"
+      volumes:
+      - name: logs-volume
+      {{- if .Values.logs.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.logs.persistence.existingClaim | default "riseml-logs-claim" }}
+      {{- else }}
+        emptyDir: {}
+      {{- end }}

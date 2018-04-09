@@ -1,0 +1,142 @@
+accountKey: ""
+clusterId: ""
+
+git:
+  persistence:
+    enabled: false
+    ## A manually managed Persistent Volume and Claim
+    ## Requires persistence.enabled: true
+    ## If defined, PVC must be created manually before volume will be bound
+    # existingClaim:
+    ## If defined, volume.beta.kubernetes.io/storage-class: <storageClass>
+    ## Default: volume.alpha.kubernetes.io/storage-class: default
+    ##
+    # storageClass:
+    accessMode: ReadWriteOnce
+    size: 30Gi
+    subPath: ""
+
+registry:
+  persistence:
+    enabled: false
+    # existingClaim:
+    # storageClass:
+    accessMode: ReadWriteOnce
+    size: 100Gi
+    subPath: ""
+
+logs:
+  persistence:
+    enabled: false
+    # existingClaim:
+    # storageClass:
+    accessMode: ReadWriteOnce
+    size: 30Gi
+    subPath: ""
+
+nfsProvisioner:
+  enabled: false
+  path: "/tmp/risemlnfs"
+  persistence:
+    enabled: false
+    # existingClaim:
+    # storageClass:
+    accessMode: ReadWriteOnce
+    size: 70Gi
+    subPath: ""
+
+minio:
+  accessKey: "minioaccess"
+  secretKey: "eEUc1g4tOhzbO2JzoLndRR3At4ctO9EM"
+
+data:
+  persistence:
+    claimName: riseml-data-claim
+    #storageClass: ""
+    accessMode: ReadWriteMany
+    size: 30Gi
+
+output:
+  persistence:
+    claimName: riseml-output-claim
+    #storageClass: ""
+    accessMode: ReadWriteMany
+    size: 30Gi
+
+imagePullPolicy: IfNotPresent
+environment: production
+nvidiaDriverDir: "/var/lib/nvidia-docker/volumes/nvidia_driver/latest"
+
+nodeSelectors:
+  riseml: {}
+  training: {}
+  system: {}
+  imageBuilder: {}
+  gpu:
+    riseml.com/gpu-node: "true"
+
+tolerations:
+  training: []
+
+useRBAC: true
+adminEmail: "admin@riseml.com"
+adminApiKey: "l15uw2p4hitp48felgmmw34dv51ix1s7"
+scheduleOnMaster: false
+
+versions:
+  api: v1.2.2
+  cronjobs: v1.2.2
+  scheduler: v1.2.2
+  loghandler: v1.2.2
+  gitweb: v1.2.2
+  gitback: v1.2.2
+  logsidecar: v1.2.2
+  imagebuilder: v1.2.2
+  monitor: v1.2.2
+
+nodePorts:
+  web: 31213
+  sync: 31876
+  minioData: 31900
+  minioOutput: 31901
+
+loadBalancerPorts:
+  web: 80
+  sync: 8765
+  minioData: 9000
+  minioOutput: 9001
+
+postgresql:
+  imageTag: 9.6.1
+  postgresUser: dbuser
+  postgresPassword: dbpass
+  postgresDatabase: riseml
+  persistence:
+    enabled: false
+    accessMode: ReadWriteOnce
+    size: "30Gi"
+    subPath: "postgresql-db"
+
+  # Values from PostgreSQL chart
+  image: "postgres"
+  metrics:
+    enabled: false
+    image: wrouesnel/postgres_exporter
+    imageTag: v0.1.1
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+  service:
+    type: ClusterIP
+    port: 5432
+    externalIPs: []
+  networkPolicy:
+    enabled: false
+    allowExternal: true
+  tolerations: []

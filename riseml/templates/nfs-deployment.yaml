@@ -1,0 +1,84 @@
+{{- if .Values.nfsProvisioner.enabled }}
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: riseml-nfs
+  labels:
+    app: riseml-nfs
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: riseml-nfs
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      serviceAccountName: riseml-serviceaccount
+      containers:
+        - name: riseml-nfs
+          image: quay.io/kubernetes_incubator/nfs-provisioner:v1.0.8
+          ports:
+            - name: nfs
+              containerPort: 2049
+            - name: mountd
+              containerPort: 20048
+            - name: rpcbind
+              containerPort: 111
+            - name: rpcbind-udp
+              containerPort: 111
+              protocol: UDP
+          securityContext:
+            capabilities:
+              add:
+                - DAC_READ_SEARCH
+                - SYS_RESOURCE
+          args:
+            - "-provisioner=riseml.com/nfs"
+            - "-grace-period=10"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SERVICE_NAME
+              value: riseml-nfs
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: export-volume
+              mountPath: /export
+      volumes:
+        - name: export-volume
+          {{- if .Values.nfsProvisioner.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.nfsProvisioner.persistence.existingClaim | default "riseml-nfs-claim" }}
+          {{- else }}
+          hostPath:
+            path: {{ .Values.nfsProvisioner.path | quote }}
+          {{ end -}}
+{{- end }}

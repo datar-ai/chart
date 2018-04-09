@@ -1,0 +1,24 @@
+{{- if and .Values.nfsProvisioner.enabled .Values.nfsProvisioner.persistence.enabled (not .Values.nfsProvisioner.persistence.existingClaim)}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: riseml-nfs-claim
+  labels:
+    app: riseml-nfs
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - {{ .Values.nfsProvisioner.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.nfsProvisioner.persistence.size | quote }}
+{{- if .Values.nfsProvisioner.persistence.storageClass }}
+{{- if (eq "-" .Values.nfsProvisioner.persistence.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.nfsProvisioner.persistence.storageClass }}"
+{{- end }}
+{{- end }}
+{{ end -}}

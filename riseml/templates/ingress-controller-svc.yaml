@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: riseml-ingress
+  labels:
+    app: riseml-ingress
+spec:
+  selector:
+    app: riseml-ingress-controller
+{{- if .Values.nodePorts }}
+  ports:
+  - port: {{ .Values.nodePorts.web }}
+    name: http
+    protocol: TCP
+    targetPort: {{ .Values.nodePorts.web }}
+    nodePort: {{ .Values.nodePorts.web }}
+  - port: 8765
+    name: rsync
+    protocol: TCP
+    targetPort: 8765
+    nodePort: {{ .Values.nodePorts.sync }}
+  - port: 9000
+    name: minio-data
+    protocol: TCP
+    targetPort: 9000
+    nodePort: {{ .Values.nodePorts.minioData }}
+  - port: 9001
+    name: minio-output
+    protocol: TCP
+    targetPort: 9001
+    nodePort: {{ .Values.nodePorts.minioOutput }}
+  type: NodePort
+{{- else }}
+  ports:
+  - port: {{ .Values.loadBalancerPorts.web }}
+    name: http
+  - port: {{ .Values.loadBalancerPorts.sync }}
+    name: rsync
+  - port: {{ .Values.loadBalancerPorts.minioData }}
+    name: minio-data
+  - port: {{ .Values.loadBalancerPorts.minioOutput }}
+    name: minio-output
+  type: LoadBalancer
+{{- end }}

@@ -1,0 +1,227 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: riseml-api
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: riseml-api
+        type: system
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      serviceAccountName: riseml-serviceaccount
+      containers:
+      - name: cronjobs
+        image: riseml/cronjobs:{{ .Values.versions.cronjobs }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: ADMIN_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: admin_email
+        - name: ADMIN_API_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: admin_api_key
+        - name: ACCOUNT_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: account_key
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: db_url
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        - name: GPU_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: gpu_node_selectors
+        - name: RISEML_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: riseml_node_selectors
+        - name: VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: version
+        {{- if eq .Values.environment "staging" }}
+        - name: STATISTICS_FREQUENCY
+          value: "2"
+        {{- end }}
+      - name: api
+        image: riseml/api:{{ .Values.versions.api }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 80
+        env:
+        - name: SSL
+          value: "0"
+        - name: PORT
+          value: "80"
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: version
+        - name: AMQP_STATE_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_state_exchange
+        - name: AMQP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_url
+        - name: AMQP_SCHEDULER_QUEUE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: amqp_scheduler_queue
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: db_url
+        - name: GITWEB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: gitweb_url
+        - name: IMAGE_REGISTRY_INTERNAL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: image_registry_internal
+        - name: IMAGE_REGISTRY_EXTERNAL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: image_registry_external
+        - name: IMAGEBUILDER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: imagebuilder_image
+        - name: IMAGEBUILDER_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: imagebuilder_node_selectors
+        - name: GPU_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: gpu_node_selectors
+        - name: TRAINING_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: training_node_selectors
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        {{- if .Values.autoscaling }}
+        - name: AUTOSCALING
+          value: "1"
+        {{- end }}
+        - name: OUTPUT_ROOT
+          value: /output
+        - name: CLUSTER_PORTS_WEB
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_ports_web
+        - name: CLUSTER_PORTS_SYNC
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_ports_sync
+        - name: CLUSTER_PORTS_MINIO_DATA
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_ports_minio_data
+        - name: CLUSTER_PORTS_MINIO_OUTPUT
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_ports_minio_output
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: accessKey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: secretKey
+        volumeMounts:
+        - name: output
+          mountPath: /output
+      volumes:
+      - name: output
+        persistentVolumeClaim:
+          claimName: {{.Values.output.persistence.claimName | quote }}

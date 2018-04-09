@@ -1,0 +1,39 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: riseml-gitback
+  labels:
+    app: riseml-git
+spec:
+  ports:
+  - port: 80
+    name: gitback-port
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: riseml-git
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: riseml-gitweb
+  labels:
+    app: riseml-git
+spec:
+  selector:
+    app: riseml-git
+  ports:
+  - port: 8888
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: riseml-sync
+  labels:
+    app: riseml-git
+spec:
+  selector:
+    app: riseml-git
+  ports:
+  - port: 8765

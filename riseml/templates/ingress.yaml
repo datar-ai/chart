@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: riseml-ingress-tcp-configmap
+  namespace: riseml
+data:
+  8765: "riseml/riseml-sync:8765"
+  9000: "riseml/riseml-minio:9000"
+  9001: "riseml/riseml-minio:9001"
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: riseml-services
+  namespace: riseml
+  annotations:
+     ingress.kubernetes.io/ssl-redirect: "false"
+     ingress.kubernetes.io/rewrite-target: /
+     ingress.kubernetes.io/add-base-url: "true"
+     kubernetes.io/ingress.class: "riseml-ingress"     
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api
+        backend:
+          serviceName: riseml-api
+          servicePort: 80
+      - path: /git
+        backend:
+          serviceName: riseml-gitweb
+          servicePort: 8888
+      - path: /stream
+        backend:
+          serviceName: riseml-loghandler
+          servicePort: 80

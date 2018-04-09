@@ -1,0 +1,39 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "{{ .Values.output.persistence.claimName }}"
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - {{ .Values.data.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.data.persistence.size | quote }}
+{{- if .Values.nfsProvisioner.enabled }}
+  storageClassName: "riseml-nfs"
+{{- else }}
+  storageClassName: "{{ .Values.data.persistence.storageClass }}"
+{{- end }}
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: "{{ .Values.data.persistence.claimName }}"
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - {{ .Values.output.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.output.persistence.size | quote }}
+{{- if .Values.nfsProvisioner.enabled }}
+  storageClassName: "riseml-nfs"
+{{- else }}
+  storageClassName: "{{ .Values.output.persistence.storageClass }}"
+{{- end }}

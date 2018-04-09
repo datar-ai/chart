@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: riseml-ingress-config
+  namespace: riseml
+data:
+  ssl-redirect: "false"
+  hsts: "false"
+  disable-ipv6: "true"

@@ -1,0 +1,24 @@
+{{- if and .Values.registry.persistence.enabled (not .Values.registry.persistence.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: riseml-registry-claim
+  labels:
+    app: riseml-registry
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - {{ .Values.registry.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.registry.persistence.size | quote }}
+{{- if .Values.registry.persistence.storageClass }}
+{{- if (eq "-" .Values.registry.persistence.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.registry.persistence.storageClass }}"
+{{- end }}
+{{- end }}
+{{- end -}}

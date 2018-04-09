@@ -1,0 +1,72 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: riseml-minio
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: riseml-minio
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.data.persistence.claimName }}
+      - name: output
+        persistentVolumeClaim:
+          claimName: {{ .Values.output.persistence.claimName }}
+      containers:
+      - name: data
+        image: minio/minio
+        args:
+        - server
+        - /storage
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: accessKey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: secretKey
+        ports:
+        - containerPort: 9000
+          hostPort: 9000
+        volumeMounts:
+        - name: data
+          mountPath: "/storage"
+      - name: output
+        image: minio/minio
+        args:
+        - server
+        - --address
+        - ":9001"
+        - /storage
+        env:
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: accessKey
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: riseml-minio
+              key: secretKey
+        ports:
+        - containerPort: 9001
+          hostPort: 9001
+        volumeMounts:
+        - name: output
+          mountPath: "/storage"

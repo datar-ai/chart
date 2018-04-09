@@ -1,0 +1,86 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: riseml-git
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: riseml-git
+        type: system
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.scheduleOnMaster }}
+      tolerations:
+        - operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- include "riseml.nodeSelectors.yaml" . | indent 6 }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: type
+                  operator: In
+                  values:
+                  - system
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: gitweb
+        image: riseml/gitweb:{{ .Values.versions.gitweb }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 8888
+        - containerPort: 8765
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.environment }}
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: cluster_id
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: backend_url
+        volumeMounts:
+        - mountPath: /git
+          name: git-volume
+          subPath: {{ .Values.git.persistence.subPath }}
+      - name: gitback
+        image: riseml/gitback:{{ .Values.versions.gitback }}
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /git
+          name: git-volume
+          subPath: {{ .Values.git.persistence.subPath }}
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: riseml-config
+              key: db_url
+        - name: SSL
+          value: "0"
+        - name: PORT
+          value: "80"
+      volumes:
+      - name: git-volume
+      {{- if .Values.git.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.git.persistence.existingClaim | default "riseml-git-claim" }}
+      {{- else }}
+        emptyDir: {}
+      {{- end }}

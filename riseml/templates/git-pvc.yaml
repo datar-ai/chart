@@ -1,0 +1,24 @@
+{{- if and .Values.git.persistence.enabled (not .Values.git.persistence.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: riseml-git-claim
+  labels:
+    app: riseml-git
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  accessModes:
+    - {{ .Values.git.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.git.persistence.size | quote }}
+{{- if .Values.git.persistence.storageClass }}
+{{- if (eq "-" .Values.git.persistence.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.git.persistence.storageClass }}"
+{{- end }}
+{{- end }}
+{{- end -}}
