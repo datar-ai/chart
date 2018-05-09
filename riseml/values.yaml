@@ -84,15 +84,15 @@ adminApiKey: "l15uw2p4hitp48felgmmw34dv51ix1s7"
 scheduleOnMaster: false
 
 versions:
-  api: v1.2.2
-  cronjobs: v1.2.2
-  scheduler: v1.2.2
-  loghandler: v1.2.2
-  gitweb: v1.2.2
-  gitback: v1.2.2
-  logsidecar: v1.2.2
-  imagebuilder: v1.2.2
-  monitor: v1.2.2
+  api: v1.2.3
+  cronjobs: v1.2.3
+  scheduler: v1.2.3
+  loghandler: v1.2.3
+  gitweb: v1.2.3
+  gitback: v1.2.3
+  logsidecar: v1.2.3
+  imagebuilder: v1.2.3
+  monitor: v1.2.3
 
 nodePorts:
   web: 31213
